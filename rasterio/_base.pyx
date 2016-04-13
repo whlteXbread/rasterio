@@ -70,6 +70,11 @@ cdef class DatasetReader(object):
         path, archive, scheme = parse_path(self.name)
         path = vsi_path(path, archive=archive, scheme=scheme)
 
+        if scheme == 's3':
+            # TODO get aws_* from self.options
+            log.debug("Getting AWS Credentials...")
+            self.env.get_aws_credentials()
+
         name_b = path.encode('utf-8')
         cdef const char *fname = name_b
 

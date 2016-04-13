@@ -5,6 +5,8 @@ import os
 import os.path
 import sys
 
+import boto3
+
 from rasterio.five import string_types
 
 
@@ -152,6 +154,36 @@ cdef class GDALEnv(ConfigEnv):
     def __exit__(self, exc_type=None, exc_val=None, exc_tb=None):
         self.exit_config_options()
         self.stop()
+
+    def get_aws_credentials(self,
+                            aws_access_key_id=None,
+                            aws_secret_access_key=None,
+                            aws_session_token=None,
+                            region_name=None,
+                            profile_name=None, **options):
+
+        session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            aws_session_token=aws_session_token,
+            region_name=region_name,
+            profile_name=profile_name)
+
+        creds = session._session.get_credentials()
+        if creds:
+            if creds.access_key:
+                options['AWS_ACCESS_KEY_ID'] = creds.access_key
+            if creds.secret_key:
+                options['AWS_SECRET_ACCESS_KEY'] = creds.secret_key
+            if creds.token:
+                options['AWS_SESSION_TOKEN'] = creds.token
+            if session.region_name:
+                options['AWS_REGION'] = session.region_name
+
+            self.options.update(options)
+            self.enter_config_options()
+        else:
+            log.error("No AWS credentials")
 
     def start(self):
         cdef const char *key_c
