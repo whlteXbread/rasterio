@@ -97,6 +97,35 @@ def driver_can_create_copy(driver_name):
     return driver_supports_mode(driver_name, 'DCAP_CREATECOPY')
 
 
+class _RasterProfile(dict):
+    def __init__(self, *args, **kwargs):
+        super(_RasterProfile, self).__init__(*args, **kwargs)
+        if 'affine' in self:
+            self._warn_affine()
+
+    def __getitem__(self, item):
+        if item == 'affine':
+            self._warn_affine()
+            return super(_RasterProfile, self).__getitem__('transform')
+        return super(_RasterProfile, self).__getitem__(item)
+
+    def __setitem__(self, item, val):
+        if item == 'affine':
+            self._warn_affine()
+            return super(_RasterProfile, self).__setitem__('transform', val)
+        return super(_RasterProfile, self).__setitem__(item, val)
+
+    def _warn_affine(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter('always')
+            warnings.warn("The 'affine' key in src.profile and src.meta "
+                          "will go away eventually. Use 'transform' "
+                          "instead.", DeprecationWarning)
+
+    def copy(self):
+        return _RasterProfile(super(_RasterProfile, self).copy())
+
+
 cdef class DatasetBase(object):
 
     def __init__(self, path, options=None):
@@ -500,7 +529,7 @@ cdef class DatasetBase(object):
             'transform': self.transform,
         }
         self._read = True
-        return m
+        return _RasterProfile(m)
 
     @property
     def compression(self):
