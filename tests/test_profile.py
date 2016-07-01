@@ -117,3 +117,26 @@ def test_dataset_profile_creation_kwds(data):
         src.update_tags(ns='rio_creation_kwds', foo='bar')
         assert src.profile['tiled'] == False
         assert src.profile['foo'] == 'bar'
+
+
+def test_profile_affine_deprecated(data):
+    tiffile = str(data.join('RGB.byte.tif'))
+    with rasterio.open(tiffile, 'r') as src:
+        meta = src.meta
+        profile = src.profile
+
+    # Getters
+    with pytest.warns(DeprecationWarning):
+        assert meta['affine'] == meta['transform']
+
+    with pytest.warns(DeprecationWarning):
+        assert profile['affine'] == profile['transform']
+
+    # Setters
+    with pytest.warns(DeprecationWarning):
+        meta['affine'] = None
+        assert meta['transform'] is None
+
+    with pytest.warns(DeprecationWarning):
+        profile['affine'] = None
+        assert profile['transform'] is None
