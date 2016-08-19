@@ -445,6 +445,23 @@ def test_warp_reproject_nolostdata(runner, tmpdir):
         assert output.crs == {'init': 'epsg:3857'}
 
 
+def test_warp_reproject_nolostdata_lores(runner, tmpdir):
+    srcname = 'tests/data/world.byte.tif'
+    outputname = str(tmpdir.join('test.tif'))
+    result = runner.invoke(main_group, [
+        'warp', srcname, outputname,
+        '--res', '100000',  # reduced resolution
+        '--dst-crs', 'EPSG:3857'])
+    assert result.exit_code == 0
+    assert os.path.exists(outputname)
+
+    with rasterio.open(outputname) as output:
+        arr = output.read()
+        # 18 column swath on the right edge should have some ones
+        assert arr[0, :, -18:].sum() > 0
+        assert output.crs == {'init': 'epsg:3857'}
+
+
 def test_warp_dst_crs_empty_string(runner, tmpdir):
     """`$ rio warp --dst-crs ''` used to perform a falsey check that would treat
     `--dst-crs ''` as though `--dst-crs` was not supplied at all.  If the user
