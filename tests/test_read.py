@@ -323,3 +323,15 @@ def test_out_shape_exceptions(path_rgb_byte_tif):
             with pytest.raises(ValueError):
                 out_shape = (5, src.height, src.width)
                 reader(1, out_shape=out_shape)
+
+
+def test_decimated_read_values():
+    # These are the values expected from GDAL 1.11
+    expected = np.array([
+        [  0,   0,   0, 255,   0],
+        [255, 255, 255, 255,   0]], dtype='uint8')
+
+    with rasterio.open('tests/data/alpha_masked_values.tif') as src:
+        result = src.read(4, out_shape=(19, 19), masked=False)[-2:, 0:5]
+
+    assert np.array_equal(expected, result)
