@@ -89,12 +89,12 @@ if [ ! -d $GDALINST/gdal-2.0.2 ]; then
 fi
 
 
-if [ ! -d $GDALINST/gdal-2.1.0 ]; then
+if [ ! -d $GDALINST/gdal-2.1.1 ]; then
   cd $GDALBUILD
-  wget http://download.osgeo.org/gdal/2.1.0/gdal-2.1.0.tar.gz
-  tar -xzf gdal-2.1.0.tar.gz
-  cd gdal-2.1.0
-  ./configure --prefix=$GDALINST/gdal-2.1.0 $GDALOPTS
+  wget http://download.osgeo.org/gdal/2.1.1/gdal-2.1.1.tar.gz
+  tar -xzf gdal-2.1.1.tar.gz
+  cd gdal-2.1.1
+  ./configure --prefix=$GDALINST/gdal-2.1.1 $GDALOPTS
   make -s -j 2
   make install
 fi

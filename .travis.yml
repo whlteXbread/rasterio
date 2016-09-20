@@ -17,7 +17,7 @@ env:
     - GDALVERSION="1.10.0"  # doesn't exist but path/lib will fall back to system
     - GDALVERSION="1.11.4"
     - GDALVERSION="2.0.2"
-    - GDALVERSION="2.1.0"
+    - GDALVERSION="2.1.1"
 addons:
   apt:
     packages:
@@ -54,7 +54,7 @@ install:
   - "rio --version"
   - "rio --gdal-version"
 script:
-  - "if [[ $TRAVIS_PYTHON_VERSION == 3.5 && $GDALVERSION == 2.1.0 ]]; then python -m pytest --doctest-ignore-import-errors --doctest-glob='*.rst' docs/*.rst -k 'not index and not quickstart and not switch' ; fi"
+  - "if [[ $TRAVIS_PYTHON_VERSION == 3.5 && $GDALVERSION == 2.1.1 ]]; then python -m pytest --doctest-ignore-import-errors --doctest-glob='*.rst' docs/*.rst -k 'not index and not quickstart and not switch' ; fi"
   - py.test --cov rasterio --cov-report term-missing
 after_success:
   - coveralls || echo "!! intermittent coveralls failure"
