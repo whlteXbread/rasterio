@@ -331,7 +331,8 @@ def test_decimated_read_values():
         [  0,   0,   0, 255,   0],
         [255, 255, 255, 255,   0]], dtype='uint8')
 
-    with rasterio.open('tests/data/alpha_masked_values.tif') as src:
-        result = src.read(4, out_shape=(19, 19), masked=False)[-2:, 0:5]
+    with rasterio.Env(GTIFF_IMPLICIT_JPEG_OVR=False):
+        with rasterio.open('tests/data/alpha_masked_values.tif') as src:
+            result = src.read(4, out_shape=(19, 19), masked=False)[-2:, 0:5]
 
     assert np.array_equal(expected, result)
