@@ -2,12 +2,14 @@
 
 
 import logging
-
+import warnings
 import numpy as np
 
 from rasterio._features import _shapes, _sieve, _rasterize, _bounds
 from rasterio.dtypes import validate_dtype, can_cast_dtype, get_minimum_dtype
+from rasterio.enums import MergeAlg
 from rasterio.env import ensure_env
+from rasterio.errors import RasterioDeprecationWarning
 from rasterio.transform import IDENTITY, guard_transform
 from rasterio.windows import Window
 
@@ -153,7 +155,7 @@ def rasterize(
         out=None,
         transform=IDENTITY,
         all_touched=False,
-        merge_alg='replace',
+        merge_alg=MergeAlg.replace,
         default_value=1,
         dtype=None):
     """Return an image array with input geometries burned in.
@@ -180,8 +182,10 @@ def rasterize(
         false, only pixels whose center is within the polygon or that
         are selected by Bresenham's line algorithm will be burned in.
     merge_alg : str, optional
-        If `replace` (default), the new value will overwrite the existing value.
-        If `add`, the new value will be added to the existing raster.
+        Merge algorithm to use.  One of:
+            MergeAlg.replace (default): the new value will overwrite the
+                existing value.
+            MergeAlg.add: the new value will be added to the existing raster.
     default_value : int or float, optional
         Used as value for all geometries, if not provided in `shapes`.
     dtype : rasterio or numpy data type, optional
@@ -200,6 +204,14 @@ def rasterize(
     rasterio.float64.
 
     """
+
+    # merge_alg usage deprecation warning.  Can be removed in rasterio 1.0
+    if not isinstance(merge_alg, MergeAlg):
+        warnings.warn("merge_alg must be MergeAlg.add or MergeAlg.replace, "
+                      "not a 'replace' or 'add'.  This usage has been "
+                      "deprecated.", RasterioDeprecationWarning)
+        merge_alg = MergeAlg[merge_alg]
+
     valid_dtypes = (
         'int16', 'int32', 'uint8', 'uint16', 'uint32', 'float32', 'float64'
     )
@@ -247,7 +259,18 @@ def rasterize(
                 'Invalid geometry object at index {0}'.format(index)
             )
 
-        valid_shapes.append((geom, value))
+        if geom['type'] == 'GeometryCollection':
+            # GeometryCollections need to be handled as individual parts to
+            # avoid holes in output:
+            # https://github.com/mapbox/rasterio/issues/1253.
+            # Only 1-level deep since GeoJSON spec discourages nested
+            # GeometryCollections
+            for part in geom['geometries']:
+                valid_shapes.append((part, value))
+
+        else:
+            valid_shapes.append((geom, value))
+
         shape_values.append(value)
 
     if not valid_shapes:
@@ -297,13 +320,17 @@ def bounds(geometry, north_up=True, transform=None):
 
     Parameters
     ----------
-    geometry: GeoJSON-like feature, feature collection, or geometry.
+    geometry: GeoJSON-like feature (implements __geo_interface__),
+              feature collection, or geometry.
 
     Returns
     -------
     tuple
         Bounding box: (left, bottom, right, top)
     """
+
+    geometry = getattr(geometry, '__geo_interface__', None) or geometry
+
     if 'bbox' in geometry:
         return tuple(geometry['bbox'])
 

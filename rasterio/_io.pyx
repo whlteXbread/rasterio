@@ -15,7 +15,7 @@ import numpy as np
 from rasterio._base import tastes_like_gdal
 from rasterio._env import driver_count, GDALEnv
 from rasterio._err import (
-    GDALError, CPLE_OpenFailedError, CPLE_IllegalArgError)
+    GDALError, CPLE_OpenFailedError, CPLE_IllegalArgError, CPLE_BaseError)
 from rasterio.crs import CRS
 from rasterio.compat import text_type, string_types
 from rasterio import dtypes
@@ -898,7 +898,7 @@ cdef class DatasetWriterBase(DatasetReaderBase):
 
     def __init__(self, path, mode, driver=None, width=None, height=None,
                  count=None, crs=None, transform=None, dtype=None, nodata=None,
-                 gcps=None, **kwargs):
+                 gcps=None, sharing=True, **kwargs):
         """Initialize a DatasetWriterBase instance."""
         cdef char **options = NULL
         cdef char *key_c = NULL
@@ -908,6 +908,7 @@ cdef class DatasetWriterBase(DatasetReaderBase):
         cdef GDALRasterBandH band = NULL
         cdef const char *fname = NULL
         cdef int flags = 0
+        cdef int sharing_flag = (0x20 if sharing else 0x0)
 
         # Validate write mode arguments.
         log.debug("Path: %s, mode: %s, driver: %s", path, mode, driver)
@@ -1025,7 +1026,7 @@ cdef class DatasetWriterBase(DatasetReaderBase):
                 driver = [driver]
 
             # flags: Update + Raster + Errors
-            flags = 0x01 | 0x02 | 0x40
+            flags = 0x01 | sharing_flag | 0x40
 
             try:
                 self._hds = open_dataset(path, flags, driver, kwargs, None)
@@ -1458,11 +1459,16 @@ cdef class DatasetWriterBase(DatasetReaderBase):
 
         band = self.band(1)
 
+        if not all(MaskFlags.per_dataset in flags for flags in self.mask_flag_enums):
+            try:
+                exc_wrap_int(GDALCreateMaskBand(band, MaskFlags.per_dataset))
+                log.debug("Created mask band")
+            except CPLE_BaseError:
+                raise RasterioIOError("Failed to create mask.")
+
         try:
-            exc_wrap_int(GDALCreateMaskBand(band, 0x02))
             mask = exc_wrap_pointer(GDALGetMaskBand(band))
-            log.debug("Created mask band")
-        except:
+        except CPLE_BaseError:
             raise RasterioIOError("Failed to get mask.")
 
         if window:
